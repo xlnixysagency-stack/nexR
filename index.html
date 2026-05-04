@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexr — Social, leveled up</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+          --bg:#050505;
+          --panel:rgba(16,16,19,.9);
+          --soft:rgba(255,255,255,.045);
+          --line:#26262c;
+          --text:#fff;
+          --muted:#a1a1aa;
+          --accent:#00e5ff;
+          --accent2:#7c3aed;
+          --hot:#ff2bd6;
+          --danger:#ff4d6d;
+        }
+
+        * { box-sizing:border-box; }
+
+        body {
+          margin:0;
+          min-height:100vh;
+          color:var(--text);
+          font-family:Arial,sans-serif;
+          background:
+            radial-gradient(circle at 15% 5%, rgba(0,229,255,.14), transparent 32%),
+            radial-gradient(circle at 85% 15%, rgba(124,58,237,.2), transparent 34%),
+            radial-gradient(circle at 45% 100%, rgba(255,43,214,.1), transparent 32%),
+            var(--bg);
+        }
+
+        a { color:inherit; text-decoration:none; }
+        button { font-family:inherit; cursor:pointer; transition:.18s ease; }
+        button:hover { transform:translateY(-2px); }
+        button:active { transform:scale(.96); }
+        svg { width:21px; height:21px; }
+
+        .app {
+          width:min(1180px,96vw);
+          margin:auto;
+          padding:22px 0 70px;
+          display:grid;
+          grid-template-columns:230px 1fr 285px;
+          gap:20px;
+        }
+
+        .card {
+          background:var(--panel);
+          border:1px solid var(--line);
+          border-radius:28px;
+          backdrop-filter:blur(18px);
+          box-shadow:0 20px 80px rgba(0,0,0,.22);
+        }
+
+        .sidebar {
+          position:sticky;
+          top:20px;
+          height:max-content;
+          padding:18px;
+          z-index:2;
+        }
+
+        .logo {
+          font-size:34px;
+          font-weight:950;
+          letter-spacing:-1px;
+          margin-bottom:24px;
+        }
+
+        .logo span {
+          color:var(--accent);
+          text-shadow:0 0 18px var(--accent);
+        }
+
+        .nav {
+          display:grid;
+          gap:8px;
+        }
+
+        .nav a {
+          display:flex;
+          align-items:center;
+          gap:12px;
+          padding:13px 14px;
+          border-radius:18px;
+          color:var(--muted);
+          font-weight:850;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+          color:white;
+          background:var(--soft);
+        }
+
+        .create-btn {
+          margin-top:18px;
+          width:100%;
+          border:0;
+          border-radius:999px;
+          padding:14px;
+          font-weight:950;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+        }
+
+        .feed {
+          display:grid;
+          gap:18px;
+          position:relative;
+          z-index:2;
+        }
+
+        .top-mobile {
+          display:none;
+        }
+
+        .composer {
+          padding:18px;
+        }
+
+        .composer h1 {
+          margin:0;
+          font-size:38px;
+          letter-spacing:-2px;
+        }
+
+        .composer p {
+          margin:8px 0 0;
+          color:var(--muted);
+        }
+
+        .tabs {
+          display:flex;
+          gap:10px;
+          margin-top:16px;
+        }
+
+        .tab {
+          border:1px solid var(--line);
+          background:#101014;
+          color:var(--muted);
+          border-radius:999px;
+          padding:10px 15px;
+          font-weight:900;
+        }
+
+        .tab.active {
+          color:black;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+        }
+
+        .pulse {
+          padding:16px;
+          overflow:hidden;
+        }
+
+        .pulse-head {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          margin-bottom:14px;
+        }
+
+        .pulse-head strong {
+          font-size:18px;
+        }
+
+        .pulse-head small {
+          color:var(--muted);
+        }
+
+        .pulse-row {
+          display:flex;
+          gap:12px;
+          overflow-x:auto;
+          padding-bottom:4px;
+        }
+
+        .pulse-row::-webkit-scrollbar {
+          height:0;
+        }
+
+        .story {
+          flex:0 0 82px;
+          text-align:center;
+        }
+
+        .story-ring {
+          width:76px;
+          height:76px;
+          border-radius:50%;
+          padding:3px;
+          background:linear-gradient(135deg,var(--hot),var(--accent2),var(--accent));
+          margin:auto;
+        }
+
+        .story-inner {
+          width:100%;
+          height:100%;
+          border-radius:50%;
+          overflow:hidden;
+          display:grid;
+          place-items:center;
+          background:#111;
+          border:3px solid #09090b;
+          font-weight:950;
+        }
+
+        .story-inner img {
+          width:100%;
+          height:100%;
+          object-fit:cover;
+        }
+
+        .story span {
+          display:block;
+          color:var(--muted);
+          font-size:12px;
+          margin-top:7px;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        }
+
+        .empty {
+          color:var(--muted);
+          padding:18px;
+          text-align:center;
+        }
+
+        .post {
+          overflow:hidden;
+          animation:rise .45s ease both;
+        }
+
+        @keyframes rise {
+          from { opacity:0; transform:translateY(18px); }
+          to { opacity:1; transform:translateY(0); }
+        }
+
+        .post-head {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:14px;
+          padding:16px;
+        }
+
+        .user-link {
+          display:flex;
+          align-items:center;
+          gap:12px;
+          min-width:0;
+        }
+
+        .avatar {
+          width:48px;
+          height:48px;
+          border-radius:50%;
+          display:grid;
+          place-items:center;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+          font-weight:950;
+          overflow:hidden;
+          flex:0 0 auto;
+        }
+
+        .avatar img {
+          width:100%;
+          height:100%;
+          object-fit:cover;
+        }
+
+        .user-meta {
+          min-width:0;
+        }
+
+        .user-meta strong,
+        .user-meta small {
+          display:block;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        }
+
+        .user-meta small {
+          color:var(--muted);
+          margin-top:3px;
+        }
+
+        .follow-btn {
+          border:1px solid var(--line);
+          background:#121216;
+          color:white;
+          border-radius:999px;
+          padding:9px 13px;
+          font-weight:950;
+        }
+
+        .follow-btn.following {
+          color:var(--muted);
+          background:transparent;
+        }
+
+        .post-img {
+          width:100%;
+          max-height:680px;
+          object-fit:cover;
+          display:block;
+          background:#09090b;
+        }
+
+        .post-body {
+          padding:15px 16px 18px;
+        }
+
+        .actions {
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:10px;
+        }
+
+        .action-left {
+          display:flex;
+          gap:10px;
+        }
+
+        .icon-btn {
+          border:0;
+          background:transparent;
+          color:white;
+          width:38px;
+          height:38px;
+          border-radius:50%;
+          display:grid;
+          place-items:center;
+        }
+
+        .icon-btn:hover {
+          background:var(--soft);
+        }
+
+        .icon-btn.active {
+          color:var(--hot);
+        }
+
+        .icon-btn.saved {
+          color:var(--accent);
+        }
+
+        .icon-btn.danger {
+          color:var(--danger);
+        }
+
+        .caption {
+          color:#e9e9ee;
+          line-height:1.55;
+          margin:8px 0 0;
+        }
+
+        .caption strong {
+          color:white;
+        }
+
+        .comments-link {
+          display:inline-block;
+          margin-top:10px;
+          color:var(--muted);
+          font-weight:800;
+        }
+
+        .rightbar {
+          position:sticky;
+          top:20px;
+          height:max-content;
+          display:grid;
+          gap:16px;
+          z-index:2;
+        }
+
+        .profile-card,
+        .suggest {
+          padding:16px;
+        }
+
+        .me,
+        .suggest-user {
+          display:flex;
+          align-items:center;
+          gap:12px;
+          min-width:0;
+        }
+
+        .me-info strong,
+        .me-info small,
+        .suggest-user strong,
+        .suggest-user small {
+          display:block;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        }
+
+        .me-info small,
+        .suggest-user small {
+          color:var(--muted);
+          margin-top:3px;
+        }
+
+        .suggest h3 {
+          margin:0 0 12px;
+        }
+
+        .suggest-item {
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:12px;
+          padding:10px 0;
+          border-top:1px solid var(--line);
+        }
+
+        .message {
+          color:var(--danger);
+          min-height:20px;
+          font-size:14px;
+          padding:0 4px;
+        }
+
+        .message.success {
+          color:var(--accent);
+        }
+
+        @media(max-width:980px) {
+          .app {
+            grid-template-columns:1fr;
+          }
+
+          .sidebar,
+          .rightbar {
+            display:none;
+          }
+
+          .top-mobile {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:14px 16px;
+          }
+
+          .mobile-actions {
+            display:flex;
+            gap:10px;
+          }
+
+          .mobile-actions a {
+            width:40px;
+            height:40px;
+            border-radius:50%;
+            display:grid;
+            place-items:center;
+            background:var(--soft);
+          }
+
+          .composer h1 {
+            font-size:31px;
+          }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app">
+    <aside class="sidebar card">
+        <div class="logo">Nex<span>r</span></div>
+
+        <nav class="nav">
+            <a class="active" href="index.html"><i data-lucide="home"></i> Home</a>
+            <a href="explore.html"><i data-lucide="compass"></i> Explore</a>
+            <a href="search.html"><i data-lucide="search"></i> Search</a>
+            <a href="notifications.html"><i data-lucide="bell"></i> Notifications</a>
+            <a href="messages.html"><i data-lucide="message-circle"></i> Messages</a>
+            <a href="reels.html"><i data-lucide="clapperboard"></i> Reels</a>
+            <a href="profile.html"><i data-lucide="user"></i> Profile</a>
+            <a href="settings.html"><i data-lucide="settings"></i> Settings</a>
+        </nav>
+
+        <button class="create-btn" onclick="window.location.href='create.html'">Create</button>
+    </aside>
+
+    <main class="feed">
+        <header class="top-mobile card">
+            <div class="logo">Nex<span>r</span></div>
+            <div class="mobile-actions">
+                <a href="create.html"><i data-lucide="plus"></i></a>
+                <a href="notifications.html"><i data-lucide="bell"></i></a>
+                <a href="profile.html"><i data-lucide="user"></i></a>
+            </div>
+        </header>
+
+        <section class="composer card">
+            <h1>Nexr Flow</h1>
+            <p>Real posts from real creators. Social, leveled up.</p>
+
+            <div class="tabs">
+                <button class="tab active" data-feed="forYou">For You</button>
+                <button class="tab" data-feed="following">Following</button>
+                <button class="tab" data-feed="rising">Rising</button>
+            </div>
+        </section>
+
+        <section class="pulse card">
+            <div class="pulse-head">
+                <strong>Pulse</strong>
+                <small>Story posts only</small>
+            </div>
+            <div class="pulse-row" id="pulseRow"></div>
+        </section>
+
+        <div class="message" id="message"></div>
+        <section id="posts"></section>
+    </main>
+
+    <aside class="rightbar">
+        <section class="profile-card card">
+            <div class="me" id="meCard"></div>
+        </section>
+
+        <section class="suggest card">
+            <h3>Rising creators</h3>
+            <div id="suggestions"></div>
+        </section>
+    </aside>
+</div>
+
+<script type="module">
+    import { auth, db } from "./firebase.js";
+
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+    import {
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      query,
+      orderBy,
+      onSnapshot,
+      updateDoc,
+      arrayUnion,
+      arrayRemove,
+      addDoc,
+      deleteDoc,
+      serverTimestamp,
+      limit
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+    let currentUser = null;
+    let currentUserData = null;
+    let allPosts = [];
+    let allUsers = [];
+    let activeFeed = "forYou";
+
+    const postsEl = document.getElementById("posts");
+    const pulseRow = document.getElementById("pulseRow");
+    const messageEl = document.getElementById("message");
+    const meCard = document.getElementById("meCard");
+    const suggestionsEl = document.getElementById("suggestions");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+      currentUserData = await getUserData(user.uid);
+
+      renderMe();
+      await loadUsers();
+      renderSuggestions();
+      listenForPosts();
+    });
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(item => item.classList.remove("active"));
+        tab.classList.add("active");
+        activeFeed = tab.dataset.feed;
+        renderPosts();
+      });
+    });
+
+    async function getUserData(uid) {
+      const userRef = doc(db, "users", uid);
+      const snapshot = await getDoc(userRef);
+
+      if (!snapshot.exists()) {
+        return {
+          uid,
+          username: currentUser.displayName || currentUser.email.split("@")[0],
+          email: currentUser.email || "",
+          avatarUrl: currentUser.photoURL || "",
+          bio: "Social, leveled up.",
+          followers: [],
+          following: [],
+          savedPosts: []
+        };
+      }
+
+      return {
+        uid,
+        followers: [],
+        following: [],
+        savedPosts: [],
+        ...snapshot.data()
+      };
+    }
+
+    async function loadUsers() {
+      const snapshot = await getDocs(collection(db, "users"));
+
+      allUsers = snapshot.docs.map(userDoc => ({
+        id: userDoc.id,
+        uid: userDoc.id,
+        followers: [],
+        following: [],
+        savedPosts: [],
+        ...userDoc.data()
+      }));
+    }
+
+    function listenForPosts() {
+      const postsQuery = query(
+        collection(db, "posts"),
+        orderBy("createdAt", "desc"),
+        limit(80)
+      );
+
+      onSnapshot(postsQuery, snapshot => {
+        allPosts = snapshot.docs.map(postDoc => ({
+          id: postDoc.id,
+          likedBy: [],
+          savedBy: [],
+          likesCount: 0,
+          commentsCount: 0,
+          commentPreview: [],
+          isStory: false,
+          ...postDoc.data()
+        }));
+
+        renderPulse();
+        renderPosts();
+      }, error => {
+        console.error(error);
+        showMessage(error.message, false);
+      });
+    }
+
+    function renderMe() {
+      meCard.innerHTML = `
+        ${getAvatarHTML(currentUserData, "avatar")}
+        <div class="me-info">
+          <strong>${escapeHTML(currentUserData.username || "creator")}</strong>
+          <small>${escapeHTML(currentUserData.bio || "Social, leveled up.")}</small>
+        </div>
+      `;
+
+      lucide.createIcons();
+    }
+
+    function renderPulse() {
+      const stories = allPosts.filter(post => post.isStory === true && getPostImage(post));
+
+      if (!stories.length) {
+        pulseRow.innerHTML = `<div class="empty">No Pulse stories yet. Create one with the Pulse toggle.</div>`;
+        return;
+      }
+
+      pulseRow.innerHTML = stories.map(post => `
+        <a class="story" href="post.html?id=${post.id}">
+          <div class="story-ring">
+            <div class="story-inner">
+              <img src="${getPostImage(post)}" alt="${escapeHTML(post.username || "Story")}">
+            </div>
+          </div>
+          <span>${escapeHTML(post.username || "creator")}</span>
+        </a>
+      `).join("");
+    }
+
+    function renderPosts() {
+      let posts = [...allPosts];
+
+      if (activeFeed === "following") {
+        const following = currentUserData.following || [];
+        posts = posts.filter(post => following.includes(post.userId));
+      }
+
+      if (activeFeed === "rising") {
+        posts = posts.sort((a, b) => {
+          const aScore = (a.likesCount || 0) + (a.commentsCount || 0) * 2;
+          const bScore = (b.likesCount || 0) + (b.commentsCount || 0) * 2;
+          return bScore - aScore;
+        });
+      }
+
+      if (!posts.length) {
+        postsEl.innerHTML = `<article class="card empty">No posts here yet.</article>`;
+        return;
+      }
+
+      postsEl.innerHTML = posts.map(post => createPostHTML(post)).join("");
+      lucide.createIcons();
+      attachPostEvents();
+    }
+
+    function createPostHTML(post) {
+      const liked = (post.likedBy || []).includes(currentUser.uid);
+      const saved = (post.savedBy || []).includes(currentUser.uid);
+      const ownPost = post.userId === currentUser.uid;
+      const following = (currentUserData.following || []).includes(post.userId);
+      const image = getPostImage(post);
+
+      return `
+        <article class="post card" data-post-id="${post.id}" data-user-id="${post.userId}">
+          <div class="post-head">
+            <a class="user-link" href="profile.html?uid=${post.userId}">
+              ${getAvatarHTML(post, "avatar")}
+              <div class="user-meta">
+                <strong>${escapeHTML(post.username || "creator")}</strong>
+                <small>${formatDate(post.createdAt)} ${post.isStory ? "• Pulse" : ""}</small>
+              </div>
+            </a>
+
+            ${ownPost ? `
+              <button class="icon-btn danger" data-action="delete" title="Delete post">
+                <i data-lucide="trash-2"></i>
+              </button>
+            ` : `
+              <button class="follow-btn ${following ? "following" : ""}" data-action="follow">
+                ${following ? "Following" : "Follow"}
+              </button>
+            `}
+          </div>
+
+          ${image ? `<a href="post.html?id=${post.id}"><img class="post-img" src="${image}" alt="Nexr post"></a>` : ""}
+
+          <div class="post-body">
+            <div class="actions">
+              <div class="action-left">
+                <button class="icon-btn ${liked ? "active" : ""}" data-action="like" aria-label="Like">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <a class="icon-btn" href="post.html?id=${post.id}" aria-label="Comment">
+                  <i data-lucide="message-circle"></i>
+                </a>
+
+                <button class="icon-btn" data-action="share" aria-label="Share">
+                  <i data-lucide="send"></i>
+                </button>
+              </div>
+
+              <button class="icon-btn ${saved ? "saved" : ""}" data-action="save" aria-label="Save">
+                <i data-lucide="bookmark"></i>
+              </button>
+            </div>
+
+            <strong>${post.likesCount || 0} likes</strong>
+
+            <p class="caption">
+              <strong>${escapeHTML(post.username || "creator")}</strong>
+              ${escapeHTML(post.caption || "")}
+            </p>
+
+            <a class="comments-link" href="post.html?id=${post.id}">
+              View ${post.commentsCount || 0} comments
+            </a>
+          </div>
+        </article>
+      `;
+    }
+
+    function attachPostEvents() {
+      document.querySelectorAll("[data-action='like']").forEach(button => {
+        button.addEventListener("click", async () => {
+          const postEl = button.closest(".post");
+          await toggleLike(postEl.dataset.postId);
+        });
+      });
+
+      document.querySelectorAll("[data-action='save']").forEach(button => {
+        button.addEventListener("click", async () => {
+          const postEl = button.closest(".post");
+          await toggleSave(postEl.dataset.postId);
+        });
+      });
+
+      document.querySelectorAll("[data-action='follow']").forEach(button => {
+        button.addEventListener("click", async () => {
+          const postEl = button.closest(".post");
+          await toggleFollow(postEl.dataset.userId);
+        });
+      });
+
+      document.querySelectorAll("[data-action='delete']").forEach(button => {
+        button.addEventListener("click", async () => {
+          const postEl = button.closest(".post");
+          await deleteOwnPost(postEl.dataset.postId);
+        });
+      });
+
+      document.querySelectorAll("[data-action='share']").forEach(button => {
+        button.addEventListener("click", async () => {
+          const postEl = button.closest(".post");
+          const base = window.location.href.replace("index.html", "");
+          const url = `${base.split("?")[0]}post.html?id=${postEl.dataset.postId}`;
+
+          try {
+            await navigator.clipboard.writeText(url);
+            showMessage("Post link copied.", true);
+          } catch {
+            showMessage("Could not copy link.", false);
+          }
+        });
+      });
+    }
+
+    async function toggleLike(postId) {
+      const post = allPosts.find(item => item.id === postId);
+      if (!post) return;
+
+      const liked = (post.likedBy || []).includes(currentUser.uid);
+      const postRef = doc(db, "posts", postId);
+
+      await updateDoc(postRef, {
+        likedBy: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+        likesCount: liked ? Math.max((post.likesCount || 0) - 1, 0) : (post.likesCount || 0) + 1
+      });
+
+      if (!liked && post.userId !== currentUser.uid) {
+        await createNotification(post.userId, "like", "liked your post", postId);
+      }
+    }
+
+    async function toggleSave(postId) {
+      const saved = (currentUserData.savedPosts || []).includes(postId);
+      const userRef = doc(db, "users", currentUser.uid);
+      const postRef = doc(db, "posts", postId);
+
+      await updateDoc(userRef, {
+        savedPosts: saved ? arrayRemove(postId) : arrayUnion(postId)
+      });
+
+      await updateDoc(postRef, {
+        savedBy: saved ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+
+      currentUserData.savedPosts = saved
+        ? (currentUserData.savedPosts || []).filter(id => id !== postId)
+        : [...(currentUserData.savedPosts || []), postId];
+
+      renderPosts();
+    }
+
+    async function toggleFollow(targetUserId) {
+      if (!targetUserId || targetUserId === currentUser.uid) return;
+
+      const following = (currentUserData.following || []).includes(targetUserId);
+      const currentUserRef = doc(db, "users", currentUser.uid);
+      const targetUserRef = doc(db, "users", targetUserId);
+
+      await updateDoc(currentUserRef, {
+        following: following ? arrayRemove(targetUserId) : arrayUnion(targetUserId)
+      });
+
+      await updateDoc(targetUserRef, {
+        followers: following ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+
+      currentUserData.following = following
+        ? (currentUserData.following || []).filter(id => id !== targetUserId)
+        : [...(currentUserData.following || []), targetUserId];
+
+      if (!following) {
+        await createNotification(targetUserId, "follow", "started following you");
+      }
+
+      renderPosts();
+      renderSuggestions();
+    }
+
+    async function deleteOwnPost(postId) {
+      const post = allPosts.find(item => item.id === postId);
+
+      if (!post) {
+        showMessage("Post not found.", false);
+        return;
+      }
+
+      if (post.userId !== currentUser.uid) {
+        showMessage("You can only delete your own posts.", false);
+        return;
+      }
+
+      const confirmed = confirm("Delete this post? This cannot be undone.");
+      if (!confirmed) return;
+
+      await deleteDoc(doc(db, "posts", postId));
+      showMessage("Post deleted.", true);
+    }
+
+    async function createNotification(toUserId, type, text, postId = "") {
+  await addDoc(collection(db, "notifications"), {
+    toUserId,
+    fromUserId: currentUser.uid,
+    fromUsername: currentUserData.username || "creator",
+    type,
+    text,
+    postId,
+    read: false,
+    createdAt: serverTimestamp()
+  });
+}
+
+    function renderSuggestions() {
+      const following = currentUserData.following || [];
+
+      const suggestions = allUsers
+        .filter(user => user.uid !== currentUser.uid)
+        .filter(user => !following.includes(user.uid))
+        .slice(0, 5);
+
+      if (!suggestions.length) {
+        suggestionsEl.innerHTML = `<div class="empty">No suggestions yet.</div>`;
+        return;
+      }
+
+      suggestionsEl.innerHTML = suggestions.map(user => `
+        <div class="suggest-item">
+          <a class="suggest-user" href="profile.html?uid=${user.uid}">
+            ${getAvatarHTML(user, "avatar")}
+            <div>
+              <strong>${escapeHTML(user.username || "creator")}</strong>
+              <small>${(user.followers || []).length} followers</small>
+            </div>
+          </a>
+
+          <button class="follow-btn" data-suggest-follow="${user.uid}">
+            Follow
+          </button>
+        </div>
+      `).join("");
+
+      document.querySelectorAll("[data-suggest-follow]").forEach(button => {
+        button.addEventListener("click", async () => {
+          await toggleFollow(button.dataset.suggestFollow);
+        });
+      });
+
+      lucide.createIcons();
+    }
+
+    function getAvatarHTML(data, className) {
+      const name = data.username || data.displayName || "N";
+      const avatarUrl = data.avatarUrl || data.photoURL || "";
+
+      if (avatarUrl) {
+        return `<div class="${className}"><img src="${avatarUrl}" alt="${escapeHTML(name)}"></div>`;
+      }
+
+      return `<div class="${className}">${escapeHTML(name.charAt(0).toUpperCase())}</div>`;
+    }
+
+    function getPostImage(post) {
+      return post.imageData || post.imageUrl || "";
+    }
+
+    function formatDate(timestamp) {
+      if (!timestamp || !timestamp.toDate) return "Just now";
+
+      const date = timestamp.toDate();
+      const diff = Date.now() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (minutes < 1) return "Just now";
+      if (minutes < 60) return `${minutes}m ago`;
+      if (hours < 24) return `${hours}h ago`;
+      if (days < 7) return `${days}d ago`;
+
+      return date.toLocaleDateString();
+    }
+
+    function showMessage(text, success = false) {
+      messageEl.textContent = text;
+      messageEl.classList.toggle("success", success);
+
+      if (text) {
+        setTimeout(() => {
+          messageEl.textContent = "";
+          messageEl.classList.remove("success");
+        }, 2600);
+      }
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    lucide.createIcons();
+</script>
+</body>
+</html>

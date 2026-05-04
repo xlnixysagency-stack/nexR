@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexr — Messages</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+          --bg:#050505;
+          --panel:rgba(16,16,19,.9);
+          --soft:rgba(255,255,255,.045);
+          --line:#26262c;
+          --text:#fff;
+          --muted:#a1a1aa;
+          --accent:#00e5ff;
+          --accent2:#7c3aed;
+        }
+
+        * { box-sizing:border-box; }
+
+        body {
+          margin:0;
+          min-height:100vh;
+          color:var(--text);
+          font-family:Arial,sans-serif;
+          background:
+            radial-gradient(circle at 15% 5%, rgba(0,229,255,.14), transparent 32%),
+            radial-gradient(circle at 85% 15%, rgba(124,58,237,.2), transparent 34%),
+            var(--bg);
+        }
+
+        a { color:inherit; text-decoration:none; }
+        button { font-family:inherit; cursor:pointer; transition:.18s ease; }
+        button:hover { transform:translateY(-2px); }
+        button:active { transform:scale(.96); }
+        svg { width:21px; height:21px; }
+
+        .page {
+          width:min(1120px,94vw);
+          margin:auto;
+          padding:26px 0 70px;
+        }
+
+        .topbar {
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:20px;
+        }
+
+        .logo {
+          font-size:34px;
+          font-weight:950;
+        }
+
+        .logo span {
+          color:var(--accent);
+          text-shadow:0 0 18px var(--accent);
+        }
+
+        .back {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          color:var(--muted);
+          font-weight:850;
+        }
+
+        .card {
+          background:var(--panel);
+          border:1px solid var(--line);
+          border-radius:30px;
+          backdrop-filter:blur(18px);
+          box-shadow:0 20px 80px rgba(0,0,0,.24);
+        }
+
+        .chat-shell {
+          display:grid;
+          grid-template-columns:330px 1fr;
+          gap:16px;
+          min-height:680px;
+        }
+
+        .sidebar {
+          padding:16px;
+          overflow:hidden;
+        }
+
+        .sidebar h1 {
+          margin:0 0 14px;
+          font-size:34px;
+          letter-spacing:-1.5px;
+        }
+
+        .search {
+          display:flex;
+          align-items:center;
+          gap:10px;
+          background:#09090b;
+          border:1px solid var(--line);
+          border-radius:999px;
+          padding:12px 14px;
+          margin-bottom:14px;
+        }
+
+        .search:focus-within {
+          border-color:var(--accent);
+          box-shadow:0 0 0 4px rgba(0,229,255,.08);
+        }
+
+        input {
+          width:100%;
+          border:0;
+          outline:0;
+          background:transparent;
+          color:white;
+          font-size:15px;
+        }
+
+        .people {
+          display:grid;
+          gap:10px;
+          max-height:550px;
+          overflow:auto;
+          padding-right:4px;
+        }
+
+        .person {
+          border:1px solid var(--line);
+          background:rgba(255,255,255,.035);
+          border-radius:20px;
+          padding:12px;
+          display:flex;
+          align-items:center;
+          gap:12px;
+          text-align:left;
+          color:white;
+        }
+
+        .person.active {
+          border-color:var(--accent);
+          background:rgba(0,229,255,.08);
+        }
+
+        .avatar {
+          width:46px;
+          height:46px;
+          border-radius:50%;
+          display:grid;
+          place-items:center;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+          font-weight:950;
+          overflow:hidden;
+          flex:0 0 auto;
+        }
+
+        .avatar img {
+          width:100%;
+          height:100%;
+          object-fit:cover;
+        }
+
+        .person-meta {
+          min-width:0;
+        }
+
+        .person-meta strong,
+        .person-meta small {
+          display:block;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        }
+
+        .person-meta small {
+          color:var(--muted);
+          margin-top:4px;
+        }
+
+        .chat {
+          display:grid;
+          grid-template-rows:auto 1fr auto;
+          overflow:hidden;
+        }
+
+        .chat-head {
+          padding:16px;
+          border-bottom:1px solid var(--line);
+          display:flex;
+          align-items:center;
+          gap:12px;
+        }
+
+        .chat-head strong,
+        .chat-head small {
+          display:block;
+        }
+
+        .chat-head small {
+          color:var(--muted);
+          margin-top:3px;
+        }
+
+        .messages {
+          padding:16px;
+          overflow:auto;
+          display:flex;
+          flex-direction:column;
+          gap:10px;
+        }
+
+        .bubble {
+          max-width:72%;
+          padding:12px 14px;
+          border-radius:20px;
+          background:#15151a;
+          color:#f3f3f6;
+          line-height:1.45;
+        }
+
+        .bubble.mine {
+          align-self:flex-end;
+          color:black;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+        }
+
+        .bubble small {
+          display:block;
+          margin-top:6px;
+          opacity:.7;
+          font-size:11px;
+        }
+
+        .composer {
+          border-top:1px solid var(--line);
+          padding:14px;
+          display:flex;
+          gap:10px;
+        }
+
+        .composer input {
+          background:#09090b;
+          border:1px solid var(--line);
+          border-radius:999px;
+          padding:13px 15px;
+        }
+
+        .send-btn {
+          border:0;
+          border-radius:50%;
+          width:48px;
+          height:48px;
+          display:grid;
+          place-items:center;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+          flex:0 0 auto;
+        }
+
+        .empty {
+          color:var(--muted);
+          text-align:center;
+          padding:30px;
+          align-self:center;
+        }
+
+        @media(max-width:850px) {
+          .chat-shell {
+            grid-template-columns:1fr;
+          }
+
+          .chat {
+            min-height:580px;
+          }
+        }
+    </style>
+</head>
+
+<body>
+<main class="page">
+    <header class="topbar">
+        <a class="back" href="index.html"><i data-lucide="arrow-left"></i> Flow</a>
+        <div class="logo">Nex<span>r</span></div>
+    </header>
+
+    <section class="chat-shell">
+        <aside class="sidebar card">
+            <h1>Messages</h1>
+
+            <div class="search">
+                <i data-lucide="search"></i>
+                <input id="userSearch" placeholder="Search creators...">
+            </div>
+
+            <div class="people" id="peopleList">
+                <div class="empty">Loading people...</div>
+            </div>
+        </aside>
+
+        <section class="chat card" id="chatPanel">
+            <div class="empty">Choose someone to start chatting.</div>
+        </section>
+    </section>
+</main>
+
+<script type="module">
+    import { auth, db } from "./firebase.js";
+
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+    import {
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      addDoc,
+      setDoc,
+      query,
+      orderBy,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+    let currentUser = null;
+    let currentUserData = null;
+    let users = [];
+    let selectedUser = null;
+    let unsubscribeMessages = null;
+
+    const peopleList = document.getElementById("peopleList");
+    const chatPanel = document.getElementById("chatPanel");
+    const userSearch = document.getElementById("userSearch");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+      currentUserData = await getCurrentUserData(user.uid);
+
+      await loadUsers();
+      renderPeople();
+    });
+
+    userSearch.addEventListener("input", renderPeople);
+
+    async function getCurrentUserData(uid) {
+      const snap = await getDoc(doc(db, "users", uid));
+
+      if (!snap.exists()) {
+        return {
+          uid,
+          username: currentUser.displayName || currentUser.email.split("@")[0],
+          email: currentUser.email || "",
+          avatarUrl: currentUser.photoURL || "",
+          bio: "Social, leveled up."
+        };
+      }
+
+      return {
+        uid,
+        ...snap.data()
+      };
+    }
+
+    async function loadUsers() {
+      const snap = await getDocs(collection(db, "users"));
+
+      users = snap.docs
+        .map(userDoc => ({
+          uid: userDoc.id,
+          followers: [],
+          following: [],
+          ...userDoc.data()
+        }))
+        .filter(user => user.uid !== currentUser.uid)
+        .sort((a, b) => (a.username || "").localeCompare(b.username || ""));
+    }
+
+    function renderPeople() {
+      const term = userSearch.value.toLowerCase().trim();
+
+      const filtered = users.filter(user => {
+        const username = String(user.username || "").toLowerCase();
+        const bio = String(user.bio || "").toLowerCase();
+        return username.includes(term) || bio.includes(term);
+      });
+
+      if (!filtered.length) {
+        peopleList.innerHTML = `<div class="empty">No creators found.</div>`;
+        return;
+      }
+
+      peopleList.innerHTML = filtered.map(user => `
+        <button class="person ${selectedUser?.uid === user.uid ? "active" : ""}" data-uid="${user.uid}">
+          ${getAvatarHTML(user)}
+          <span class="person-meta">
+            <strong>${escapeHTML(user.username || "creator")}</strong>
+            <small>${escapeHTML(user.bio || "Social, leveled up.")}</small>
+          </span>
+        </button>
+      `).join("");
+
+      document.querySelectorAll(".person").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedUser = users.find(user => user.uid === button.dataset.uid);
+          renderPeople();
+          openChat();
+        });
+      });
+
+      lucide.createIcons();
+    }
+
+    function openChat() {
+      if (!selectedUser) return;
+
+      const conversationId = getConversationId(currentUser.uid, selectedUser.uid);
+
+      chatPanel.innerHTML = `
+        <div class="chat-head">
+          ${getAvatarHTML(selectedUser)}
+          <div>
+            <strong>${escapeHTML(selectedUser.username || "creator")}</strong>
+            <small>${escapeHTML(selectedUser.bio || "Social, leveled up.")}</small>
+          </div>
+        </div>
+
+        <div class="messages" id="messagesList">
+          <div class="empty">Loading messages...</div>
+        </div>
+
+        <form class="composer" id="messageForm">
+          <input id="messageInput" maxlength="500" placeholder="Write a message..." autocomplete="off">
+          <button class="send-btn" type="submit">
+            <i data-lucide="send"></i>
+          </button>
+        </form>
+      `;
+
+      document.getElementById("messageForm").addEventListener("submit", sendMessage);
+
+      listenForMessages(conversationId);
+      lucide.createIcons();
+    }
+
+    function listenForMessages(conversationId) {
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+      }
+
+      const messagesQuery = query(
+        collection(db, "conversations", conversationId, "messages"),
+        orderBy("createdAt", "asc")
+      );
+
+      unsubscribeMessages = onSnapshot(messagesQuery, snapshot => {
+        const messages = snapshot.docs.map(messageDoc => ({
+          id: messageDoc.id,
+          ...messageDoc.data()
+        }));
+
+        renderMessages(messages);
+      });
+    }
+
+    function renderMessages(messages) {
+      const messagesList = document.getElementById("messagesList");
+      if (!messagesList) return;
+
+      if (!messages.length) {
+        messagesList.innerHTML = `<div class="empty">No messages yet. Say hi.</div>`;
+        return;
+      }
+
+      messagesList.innerHTML = messages.map(message => {
+        const mine = message.fromUserId === currentUser.uid;
+
+        return `
+          <div class="bubble ${mine ? "mine" : ""}">
+            ${escapeHTML(message.text || "")}
+            <small>${formatDate(message.createdAt)}</small>
+          </div>
+        `;
+      }).join("");
+
+      messagesList.scrollTop = messagesList.scrollHeight;
+    }
+
+    async function sendMessage(event) {
+      event.preventDefault();
+
+      if (!selectedUser) return;
+
+      const input = document.getElementById("messageInput");
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      const conversationId = getConversationId(currentUser.uid, selectedUser.uid);
+      const conversationRef = doc(db, "conversations", conversationId);
+
+      input.value = "";
+
+      await setDoc(conversationRef, {
+        id: conversationId,
+        participants: [currentUser.uid, selectedUser.uid],
+        participantNames: {
+          [currentUser.uid]: currentUserData.username || "creator",
+          [selectedUser.uid]: selectedUser.username || "creator"
+        },
+        lastMessage: text,
+        lastMessageAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      await addDoc(collection(db, "conversations", conversationId, "messages"), {
+        conversationId,
+        fromUserId: currentUser.uid,
+        toUserId: selectedUser.uid,
+        fromUsername: currentUserData.username || "creator",
+        text,
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+
+    function getConversationId(uidA, uidB) {
+      return [uidA, uidB].sort().join("_");
+    }
+
+    function getAvatarHTML(user) {
+      const name = user.username || "N";
+      const avatarUrl = user.avatarUrl || "";
+
+      if (avatarUrl) {
+        return `<span class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(name)}"></span>`;
+      }
+
+      return `<span class="avatar">${escapeHTML(name.charAt(0).toUpperCase())}</span>`;
+    }
+
+    function formatDate(timestamp) {
+      if (!timestamp || !timestamp.toDate) return "Just now";
+
+      const date = timestamp.toDate();
+      const diff = Date.now() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(minutes / 60);
+
+      if (minutes < 1) return "Just now";
+      if (minutes < 60) return `${minutes}m ago`;
+      if (hours < 24) return `${hours}h ago`;
+
+      return date.toLocaleDateString();
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    lucide.createIcons();
+</script>
+</body>
+</html>

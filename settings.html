@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexr — Settings</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+          --bg:#050505;
+          --panel:rgba(16,16,19,.9);
+          --soft:rgba(255,255,255,.045);
+          --line:#26262c;
+          --text:#fff;
+          --muted:#a1a1aa;
+          --accent:#00e5ff;
+          --accent2:#7c3aed;
+          --danger:#ff4d6d;
+        }
+
+        * { box-sizing:border-box; }
+
+        body {
+          margin:0;
+          min-height:100vh;
+          color:var(--text);
+          font-family:Arial,sans-serif;
+          background:
+            radial-gradient(circle at 15% 5%, rgba(0,229,255,.14), transparent 32%),
+            radial-gradient(circle at 85% 15%, rgba(124,58,237,.2), transparent 34%),
+            var(--bg);
+        }
+
+        a { color:inherit; text-decoration:none; }
+        button { font-family:inherit; cursor:pointer; transition:.18s ease; }
+        button:hover { transform:translateY(-2px); }
+        button:active { transform:scale(.96); }
+        svg { width:21px; height:21px; }
+
+        .page {
+          width:min(760px,94vw);
+          margin:auto;
+          padding:26px 0 70px;
+        }
+
+        .topbar {
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:20px;
+        }
+
+        .logo {
+          font-size:34px;
+          font-weight:950;
+        }
+
+        .logo span {
+          color:var(--accent);
+          text-shadow:0 0 18px var(--accent);
+        }
+
+        .back {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          color:var(--muted);
+          font-weight:850;
+        }
+
+        .card {
+          background:var(--panel);
+          border:1px solid var(--line);
+          border-radius:30px;
+          padding:20px;
+          backdrop-filter:blur(18px);
+          box-shadow:0 20px 80px rgba(0,0,0,.24);
+          margin-bottom:16px;
+        }
+
+        h1 {
+          margin:0;
+          font-size:42px;
+          letter-spacing:-2px;
+        }
+
+        h2 {
+          margin:0 0 12px;
+          font-size:22px;
+        }
+
+        .sub {
+          color:var(--muted);
+          line-height:1.6;
+          margin:8px 0 0;
+        }
+
+        .profile-row {
+          display:flex;
+          align-items:center;
+          gap:14px;
+        }
+
+        .avatar {
+          width:58px;
+          height:58px;
+          border-radius:50%;
+          display:grid;
+          place-items:center;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+          font-weight:950;
+          overflow:hidden;
+          flex:0 0 auto;
+        }
+
+        .avatar img {
+          width:100%;
+          height:100%;
+          object-fit:cover;
+        }
+
+        .profile-meta strong,
+        .profile-meta small {
+          display:block;
+        }
+
+        .profile-meta small {
+          color:var(--muted);
+          margin-top:4px;
+        }
+
+        .setting {
+          border-top:1px solid var(--line);
+          padding:15px 0;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:14px;
+        }
+
+        .setting:first-of-type {
+          border-top:0;
+        }
+
+        .setting-info strong,
+        .setting-info small {
+          display:block;
+        }
+
+        .setting-info small {
+          color:var(--muted);
+          margin-top:5px;
+          line-height:1.45;
+        }
+
+        .btn {
+          border-radius:999px;
+          padding:11px 15px;
+          font-weight:950;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:8px;
+          white-space:nowrap;
+        }
+
+        .primary {
+          border:0;
+          background:linear-gradient(135deg,var(--accent),var(--accent2));
+          color:black;
+        }
+
+        .secondary {
+          border:1px solid var(--line);
+          background:#121216;
+          color:white;
+        }
+
+        .danger {
+          border:1px solid rgba(255,77,109,.45);
+          background:rgba(255,77,109,.08);
+          color:var(--danger);
+        }
+
+        .message {
+          min-height:22px;
+          color:var(--danger);
+          font-size:14px;
+        }
+
+        .message.success {
+          color:var(--accent);
+        }
+
+        .loading {
+          opacity:.7;
+          pointer-events:none;
+        }
+
+        @media(max-width:620px) {
+          h1 {
+            font-size:34px;
+          }
+
+          .setting {
+            align-items:flex-start;
+            flex-direction:column;
+          }
+
+          .btn {
+            width:100%;
+          }
+        }
+    </style>
+</head>
+
+<body>
+<main class="page">
+    <header class="topbar">
+        <a class="back" href="index.html"><i data-lucide="arrow-left"></i> Flow</a>
+        <div class="logo">Nex<span>r</span></div>
+    </header>
+
+    <section class="card">
+        <h1>Settings</h1>
+        <p class="sub">Manage your Nexr account, profile, and session.</p>
+    </section>
+
+    <section class="card" id="accountCard">
+        <div class="profile-row" id="profileRow">
+            <div class="avatar">N</div>
+            <div class="profile-meta">
+                <strong>Loading...</strong>
+                <small>Please wait</small>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Account</h2>
+
+        <div class="setting">
+            <div class="setting-info">
+                <strong>Edit profile</strong>
+                <small>Update your username, bio, and avatar.</small>
+            </div>
+            <button class="btn primary" id="editProfileBtn">
+                <i data-lucide="pencil"></i>
+                Edit
+            </button>
+        </div>
+
+        <div class="setting">
+            <div class="setting-info">
+                <strong>View public profile</strong>
+                <small>Open your Nexr profile page.</small>
+            </div>
+            <button class="btn secondary" id="viewProfileBtn">
+                <i data-lucide="user"></i>
+                View
+            </button>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Session</h2>
+
+        <div class="setting">
+            <div class="setting-info">
+                <strong>Log out</strong>
+                <small>Sign out of this device.</small>
+            </div>
+            <button class="btn secondary" id="logoutBtn">
+                <i data-lucide="log-out"></i>
+                Log out
+            </button>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Danger zone</h2>
+
+        <div class="setting">
+            <div class="setting-info">
+                <strong>Delete account</strong>
+                <small>This deletes your profile document. Auth deletion may require recent login.</small>
+            </div>
+            <button class="btn danger" id="deleteAccountBtn">
+                <i data-lucide="trash-2"></i>
+                Delete
+            </button>
+        </div>
+
+        <div class="message" id="message"></div>
+    </section>
+</main>
+
+<script type="module">
+    import { auth, db } from "./firebase.js";
+
+    import {
+      onAuthStateChanged,
+      signOut,
+      deleteUser
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+    import {
+      doc,
+      getDoc,
+      deleteDoc
+    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+    let currentUser = null;
+    let currentUserData = null;
+
+    const accountCard = document.getElementById("accountCard");
+    const profileRow = document.getElementById("profileRow");
+    const message = document.getElementById("message");
+
+    const editProfileBtn = document.getElementById("editProfileBtn");
+    const viewProfileBtn = document.getElementById("viewProfileBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+      currentUserData = await getUserData(user.uid);
+      renderAccount();
+    });
+
+    editProfileBtn.addEventListener("click", () => {
+      window.location.href = "edit-profile.html";
+    });
+
+    viewProfileBtn.addEventListener("click", () => {
+      if (!currentUser) return;
+      window.location.href = `profile.html?uid=${currentUser.uid}`;
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        setLoading(true);
+        await signOut(auth);
+        window.location.href = "login.html";
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    deleteAccountBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
+
+      const firstConfirm = confirm("Delete your Nexr account? This cannot be undone.");
+      if (!firstConfirm) return;
+
+      const typed = prompt('Type DELETE to confirm account deletion.');
+
+      if (typed !== "DELETE") {
+        showMessage("Account deletion cancelled.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        showMessage("Deleting account...", true);
+
+        await deleteDoc(doc(db, "users", currentUser.uid));
+        await deleteUser(currentUser);
+
+        window.location.href = "signup.html";
+      } catch (error) {
+        console.error(error);
+
+        if (error.code === "auth/requires-recent-login") {
+          showMessage("Please log out, log back in, then delete your account.");
+        } else {
+          showMessage(error.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    async function getUserData(uid) {
+      const snapshot = await getDoc(doc(db, "users", uid));
+
+      if (!snapshot.exists()) {
+        return {
+          uid,
+          username: currentUser.displayName || currentUser.email.split("@")[0],
+          email: currentUser.email || "",
+          avatarUrl: currentUser.photoURL || "",
+          bio: "Social, leveled up."
+        };
+      }
+
+      return {
+        uid,
+        ...snapshot.data()
+      };
+    }
+
+    function renderAccount() {
+      const username = currentUserData.username || "creator";
+      const email = currentUserData.email || currentUser.email || "";
+      const avatarUrl = currentUserData.avatarUrl || currentUser.photoURL || "";
+
+      profileRow.innerHTML = `
+        ${avatarUrl
+          ? `<div class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(username)}"></div>`
+          : `<div class="avatar">${escapeHTML(username.charAt(0).toUpperCase())}</div>`
+        }
+
+        <div class="profile-meta">
+          <strong>${escapeHTML(username)}</strong>
+          <small>${escapeHTML(email)}</small>
+        </div>
+      `;
+    }
+
+    function setLoading(isLoading) {
+      accountCard.classList.toggle("loading", isLoading);
+      logoutBtn.disabled = isLoading;
+      deleteAccountBtn.disabled = isLoading;
+    }
+
+    function showMessage(text, success = false) {
+      message.textContent = text;
+      message.classList.toggle("success", success);
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    lucide.createIcons();
+</script>
+</body>
+</html>
