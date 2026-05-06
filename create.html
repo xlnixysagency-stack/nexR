@@ -4,15 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nexr — Create</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root {
-      --bg:#050505;
+      --bg:#050507;
       --panel:rgba(16,16,19,.86);
-      --line:#26262c;
-      --text:#fff;
-      --muted:#a1a1aa;
+      --line:rgba(255,255,255,.08);
+      --text:#f0f0f5;
+      --muted:#8888a0;
       --accent:#00e5ff;
       --accent2:#7c3aed;
       --hot:#ff2bd6;
@@ -25,7 +28,7 @@
       margin:0;
       min-height:100vh;
       color:var(--text);
-      font-family:Arial,sans-serif;
+      font-family:'DM Sans',Arial,sans-serif;
       background:
         radial-gradient(circle at 20% 10%, rgba(0,229,255,.16), transparent 30%),
         radial-gradient(circle at 80% 15%, rgba(124,58,237,.22), transparent 32%),
@@ -94,7 +97,8 @@
       font-size:34px;
       font-weight:950;
       letter-spacing:-1px;
-    }
+      font-family:'Space Grotesk',Arial,sans-serif;
+        }
 
     .logo span {
       color:var(--accent);
@@ -349,6 +353,8 @@
     }
 
     @media(max-width:850px) {
+      .page { padding-bottom: 90px; }
+
       .shell {
         grid-template-columns:1fr;
       }
@@ -445,208 +451,211 @@
 </main>
 
 <script type="module">
-  import { auth, db } from "./firebase.js";
+  import { injectMobileNav } from "./nav.js";
+injectMobileNav("create");
 
-  import {
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { auth, db } from "./firebase.js";
 
-  import {
-    collection,
-    doc,
-    getDoc,
-    addDoc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 
-  let currentUser = null;
-  let currentUserData = null;
-  let imageData = null;
+import {
+  collection,
+  doc,
+  getDoc,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-  const shell = document.getElementById("createShell");
-  const imageInput = document.getElementById("imageInput");
-  const preview = document.getElementById("preview");
-  const captionInput = document.getElementById("caption");
-  const storyToggle = document.getElementById("storyToggle");
-  const message = document.getElementById("message");
+let currentUser = null;
+let currentUserData = null;
+let imageData = null;
 
-  onAuthStateChanged(auth, async user => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
+const shell = document.getElementById("createShell");
+const imageInput = document.getElementById("imageInput");
+const preview = document.getElementById("preview");
+const captionInput = document.getElementById("caption");
+const storyToggle = document.getElementById("storyToggle");
+const message = document.getElementById("message");
 
-    currentUser = user;
-    currentUserData = await getCurrentUserData(user.uid);
-  });
-
-  async function getCurrentUserData(uid) {
-    const userRef = doc(db, "users", uid);
-    const snapshot = await getDoc(userRef);
-
-    if (!snapshot.exists()) {
-      return {
-        uid,
-        username: currentUser.displayName || currentUser.email.split("@")[0],
-        avatarUrl: currentUser.photoURL || "",
-        bio: "Social, leveled up.",
-        followers: [],
-        following: [],
-        savedPosts: []
-      };
-    }
-
-    return snapshot.data();
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
   }
 
-  imageInput.addEventListener("change", async () => {
-    const file = imageInput.files[0];
-    if (!file) return;
+  currentUser = user;
+  currentUserData = await getCurrentUserData(user.uid);
+});
 
-    if (!file.type.startsWith("image/")) {
-      showMessage("Please choose an image file.");
-      return;
-    }
+async function getCurrentUserData(uid) {
+  const userRef = doc(db, "users", uid);
+  const snapshot = await getDoc(userRef);
 
-    try {
-      setLoading(true);
-      showMessage("Compressing image...", true);
+  if (!snapshot.exists()) {
+    return {
+      uid,
+      username: currentUser.displayName || currentUser.email.split("@")[0],
+      avatarUrl: currentUser.photoURL || "",
+      bio: "Social, leveled up.",
+      followers: [],
+      following: [],
+      savedPosts: []
+    };
+  }
 
-      imageData = await compressImage(file, 900, 0.68);
+  return snapshot.data();
+}
 
-      preview.innerHTML = `<img src="${imageData}" alt="Selected image">`;
-      showMessage("Image ready.", true);
-    } catch (error) {
-      console.error(error);
-      showMessage("Could not process image.");
-    } finally {
-      setLoading(false);
-    }
-  });
+imageInput.addEventListener("change", async () => {
+  const file = imageInput.files[0];
+  if (!file) return;
 
-  document.getElementById("shareBtn").addEventListener("click", async () => {
-    const caption = captionInput.value.trim();
-    const isStory = storyToggle.checked;
+  if (!file.type.startsWith("image/")) {
+    showMessage("Please choose an image file.");
+    return;
+  }
 
-    if (!caption && !imageData) {
-      showMessage("Add an image or caption first.");
-      return;
-    }
+  try {
+    setLoading(true);
+    showMessage("Compressing image...", true);
 
-    if (isStory && !imageData) {
-      showMessage("Pulse stories need an image.");
-      return;
-    }
+    imageData = await compressImage(file, 900, 0.68);
 
-    if (!currentUser || !currentUserData) {
-      showMessage("Still loading your account. Try again.");
-      return;
-    }
+    preview.innerHTML = `<img src="${imageData}" alt="Selected image">`;
+    showMessage("Image ready.", true);
+  } catch (error) {
+    console.error(error);
+    showMessage("Could not process image.");
+  } finally {
+    setLoading(false);
+  }
+});
 
-    try {
-      setLoading(true);
-      showMessage("Posting to Nexr...", true);
+document.getElementById("shareBtn").addEventListener("click", async () => {
+  const caption = captionInput.value.trim();
+  const isStory = storyToggle.checked;
 
-      await addDoc(collection(db, "posts"), {
-        userId: currentUser.uid,
-        username: currentUserData.username || currentUser.displayName || "creator",
-        avatar: (currentUserData.username || currentUser.displayName || "C").charAt(0).toUpperCase(),
-        avatarUrl: currentUserData.avatarUrl || currentUser.photoURL || "",
-        caption: caption || "New Nexr post.",
-        imageData: imageData || "",
-        imageUrl: "",
-        isStory,
-        likedBy: [],
-        likesCount: 0,
-        savedBy: [],
-        commentsCount: 0,
-        commentPreview: [],
-        createdAt: serverTimestamp()
-      });
+  if (!caption && !imageData) {
+    showMessage("Add an image or caption first.");
+    return;
+  }
 
-      showMessage(isStory ? "Posted to Flow and Pulse. Redirecting..." : "Posted to Flow. Redirecting...", true);
+  if (isStory && !imageData) {
+    showMessage("Pulse stories need an image.");
+    return;
+  }
 
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 700);
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message);
-    } finally {
-      setLoading(false);
-    }
-  });
+  if (!currentUser || !currentUserData) {
+    showMessage("Still loading your account. Try again.");
+    return;
+  }
 
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    imageData = null;
-    imageInput.value = "";
-    captionInput.value = "";
-    storyToggle.checked = false;
+  try {
+    setLoading(true);
+    showMessage("Posting to Nexr...", true);
 
-    preview.innerHTML = `
-      <div class="preview-placeholder">
-        <i data-lucide="image-plus"></i>
-        <h2>Upload a photo</h2>
-        <p>We’ll compress it so Nexr stays free to run.</p>
-      </div>
-    `;
-
-    showMessage("");
-    lucide.createIcons();
-  });
-
-  function compressImage(file, maxWidth = 900, quality = 0.68) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onerror = () => reject(new Error("Could not read image."));
-
-      reader.onload = event => {
-        const img = new Image();
-
-        img.onerror = () => reject(new Error("Could not load image."));
-
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-
-          const scale = Math.min(1, maxWidth / img.width);
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          let compressed = canvas.toDataURL("image/jpeg", quality);
-
-          if (compressed.length > 900000) {
-            compressed = canvas.toDataURL("image/jpeg", 0.5);
-          }
-
-          if (compressed.length > 1000000) {
-            reject(new Error("Image is still too large. Try a smaller photo."));
-            return;
-          }
-
-          resolve(compressed);
-        };
-
-        img.src = event.target.result;
-      };
-
-      reader.readAsDataURL(file);
+    await addDoc(collection(db, "posts"), {
+      userId: currentUser.uid,
+      username: currentUserData.username || currentUser.displayName || "creator",
+      avatar: (currentUserData.username || currentUser.displayName || "C").charAt(0).toUpperCase(),
+      avatarUrl: currentUserData.avatarUrl || currentUser.photoURL || "",
+      caption: caption || "New Nexr post.",
+      imageData: imageData || "",
+      imageUrl: "",
+      isStory,
+      likedBy: [],
+      likesCount: 0,
+      savedBy: [],
+      commentsCount: 0,
+      commentPreview: [],
+      createdAt: serverTimestamp()
     });
-  }
 
-  function setLoading(isLoading) {
-    shell.classList.toggle("loading", isLoading);
-  }
+    showMessage(isStory ? "Posted to Flow and Pulse. Redirecting..." : "Posted to Flow. Redirecting...", true);
 
-  function showMessage(text, success = false) {
-    message.textContent = text;
-    message.classList.toggle("success", success);
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 700);
+  } catch (error) {
+    console.error(error);
+    showMessage(error.message);
+  } finally {
+    setLoading(false);
   }
+});
 
+document.getElementById("clearBtn").addEventListener("click", () => {
+  imageData = null;
+  imageInput.value = "";
+  captionInput.value = "";
+  storyToggle.checked = false;
+
+  preview.innerHTML = `
+    <div class="preview-placeholder">
+      <i data-lucide="image-plus"></i>
+      <h2>Upload a photo</h2>
+      <p>We’ll compress it so Nexr stays free to run.</p>
+    </div>
+  `;
+
+  showMessage("");
   lucide.createIcons();
+});
+
+function compressImage(file, maxWidth = 900, quality = 0.68) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("Could not read image."));
+
+    reader.onload = event => {
+      const img = new Image();
+
+      img.onerror = () => reject(new Error("Could not load image."));
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        let compressed = canvas.toDataURL("image/jpeg", quality);
+
+        if (compressed.length > 900000) {
+          compressed = canvas.toDataURL("image/jpeg", 0.5);
+        }
+
+        if (compressed.length > 1000000) {
+          reject(new Error("Image is still too large. Try a smaller photo."));
+          return;
+        }
+
+        resolve(compressed);
+      };
+
+      img.src = event.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function setLoading(isLoading) {
+  shell.classList.toggle("loading", isLoading);
+}
+
+function showMessage(text, success = false) {
+  message.textContent = text;
+  message.classList.toggle("success", success);
+}
+
+lucide.createIcons();
 </script>
 </body>
 </html>

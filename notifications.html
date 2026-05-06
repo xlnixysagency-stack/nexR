@@ -267,7 +267,7 @@
       collection,
       query,
       where,
-      getDocs,
+      onSnapshot,
       doc,
       updateDoc,
       deleteDoc
@@ -275,9 +275,11 @@
 
     let currentUser = null;
     let notifications = [];
+    let unsubscribe = null;
 
     const notificationsList = document.getElementById("notificationsList");
     const markAllBtn = document.getElementById("markAllBtn");
+    const unreadBadge = document.getElementById("unreadBadge");
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -286,26 +288,27 @@
       }
 
       currentUser = user;
-      await loadNotifications();
+      listenForNotifications();
     });
 
     markAllBtn.addEventListener("click", markAllRead);
 
-    async function loadNotifications() {
-      try {
-        const notificationsQuery = query(
-          collection(db, "notifications"),
-          where("toUserId", "==", currentUser.uid)
-        );
+    function listenForNotifications() {
+      // Unsubscribe any previous listener
+      if (unsubscribe) unsubscribe();
 
-        const snapshot = await getDocs(notificationsQuery);
+      const q = query(
+        collection(db, "notifications"),
+        where("toUserId", "==", currentUser.uid)
+      );
 
-        notifications = snapshot.docs.map(notificationDoc => ({
-          id: notificationDoc.id,
+      unsubscribe = onSnapshot(q, snapshot => {
+        notifications = snapshot.docs.map(d => ({
+          id: d.id,
           read: false,
           type: "activity",
           text: "sent you a notification",
-          ...notificationDoc.data()
+          ...d.data()
         }));
 
         notifications.sort((a, b) => {
@@ -315,13 +318,22 @@
         });
 
         renderNotifications();
-      } catch (error) {
+        updateBadge();
+      }, error => {
         console.error(error);
         notificationsList.innerHTML = `
           <article class="card message error">
             Could not load notifications: ${escapeHTML(error.message)}
           </article>
         `;
+      });
+    }
+
+    function updateBadge() {
+      const unread = notifications.filter(n => !n.read).length;
+      if (unreadBadge) {
+        unreadBadge.textContent = unread > 0 ? (unread > 99 ? "99+" : unread) : "";
+        unreadBadge.style.display = unread > 0 ? "inline-block" : "none";
       }
     }
 

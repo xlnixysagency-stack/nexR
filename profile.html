@@ -4,16 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nexr — Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root {
-      --bg:#050505;
-      --panel:rgba(16,16,19,.9);
+      --bg:#050507;
+      --panel:rgba(14,14,18,.88);
       --soft:rgba(255,255,255,.045);
-      --line:#26262c;
-      --text:#fff;
-      --muted:#a1a1aa;
+      --line:rgba(255,255,255,.08);
+      --text:#f0f0f5;
+      --muted:#8888a0;
       --accent:#00e5ff;
       --accent2:#7c3aed;
       --hot:#ff2bd6;
@@ -26,7 +29,7 @@
       margin:0;
       min-height:100vh;
       color:var(--text);
-      font-family:Arial,sans-serif;
+      font-family:'DM Sans',Arial,sans-serif;
       background:
         radial-gradient(circle at 15% 5%, rgba(0,229,255,.14), transparent 32%),
         radial-gradient(circle at 85% 15%, rgba(124,58,237,.2), transparent 34%),
@@ -57,7 +60,8 @@
       font-size:34px;
       font-weight:950;
       letter-spacing:-1px;
-    }
+      font-family:'Space Grotesk',Arial,sans-serif;
+        }
 
     .logo span {
       color:var(--accent);
@@ -267,6 +271,8 @@
     }
 
     @media(max-width:760px) {
+      .page { padding-bottom: 90px; }
+
       .profile-top {
         grid-template-columns:1fr;
         text-align:center;
@@ -312,311 +318,308 @@
 </main>
 
 <script type="module">
-  import { auth, db } from "./firebase.js";
+  import { injectMobileNav } from "./nav.js";
+injectMobileNav("profile");
 
-  import {
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { auth, db } from "./firebase.js";
 
-  import {
-    collection,
-    doc,
-    getDoc,
-    query,
-    where,
-    getDocs,
-    updateDoc,
-    setDoc,
-    arrayUnion,
-    arrayRemove,
-    addDoc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 
-  let currentUser = null;
-  let currentUserData = null;
-  let profileUserId = null;
-  let profileUserData = null;
-  let userPosts = [];
-  let savedPosts = [];
-  let activeTab = "posts";
+import {
+  collection,
+  doc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  setDoc,
+  arrayUnion,
+  arrayRemove,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-  const profileCard = document.getElementById("profileCard");
-  const postsGrid = document.getElementById("postsGrid");
-  const tabs = document.getElementById("tabs");
+let currentUser = null;
+let currentUserData = null;
+let profileUserId = null;
+let profileUserData = null;
+let userPosts = [];
+let savedPosts = [];
+let activeTab = "posts";
 
-  onAuthStateChanged(auth, async user => {
-    if (!user) {
-      window.location.href = "login.html";
+const profileCard = document.getElementById("profileCard");
+const postsGrid = document.getElementById("postsGrid");
+const tabs = document.getElementById("tabs");
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  currentUser = user;
+  currentUserData = await getOrCreateUserData(user);
+
+  const requestedUid = new URLSearchParams(window.location.search).get("uid");
+  // If no uid param OR uid param matches self, treat as own profile
+  profileUserId = (requestedUid && requestedUid !== currentUser.uid)
+    ? requestedUid
+    : currentUser.uid;
+
+  await loadProfile();
+});
+
+async function getOrCreateUserData(user) {
+  const userRef = doc(db, "users", user.uid);
+  const snapshot = await getDoc(userRef);
+
+  const fallbackData = {
+    uid: user.uid,
+    username: user.displayName || user.email.split("@")[0],
+    email: user.email || "",
+    avatarUrl: user.photoURL || "",
+    bio: "Social, leveled up.",
+    followers: [],
+    following: [],
+    savedPosts: [],
+    createdAt: serverTimestamp()
+  };
+
+  if (!snapshot.exists()) {
+    await setDoc(userRef, fallbackData);
+    return fallbackData;
+  }
+
+  return {
+    uid: user.uid,
+    followers: [],
+    following: [],
+    savedPosts: [],
+    ...snapshot.data()
+  };
+}
+
+async function loadProfile() {
+  try {
+    const profileRef = doc(db, "users", profileUserId);
+    const profileSnap = await getDoc(profileRef);
+
+    if (!profileSnap.exists()) {
+      profileCard.innerHTML = `<div class="message error">Profile not found.</div>`;
+      postsGrid.innerHTML = "";
       return;
     }
 
-    currentUser = user;
-    currentUserData = await getOrCreateUserData(user);
-
-    const requestedUid = new URLSearchParams(window.location.search).get("uid");
-    profileUserId = requestedUid || currentUser.uid;
-
-    await loadProfile();
-  });
-
-  async function getOrCreateUserData(user) {
-    const userRef = doc(db, "users", user.uid);
-    const snapshot = await getDoc(userRef);
-
-    const fallbackData = {
-      uid: user.uid,
-      username: user.displayName || user.email.split("@")[0],
-      email: user.email || "",
-      avatarUrl: user.photoURL || "",
-      bio: "Social, leveled up.",
+    profileUserData = {
+      uid: profileUserId,
       followers: [],
       following: [],
       savedPosts: [],
-      createdAt: serverTimestamp()
+      ...profileSnap.data()
     };
 
-    if (!snapshot.exists()) {
-      await setDoc(userRef, fallbackData);
-      return fallbackData;
+    await loadUserPosts();
+
+    if (isOwnProfile()) {
+      await loadSavedPosts();
     }
 
-    return {
-      uid: user.uid,
-      followers: [],
-      following: [],
-      savedPosts: [],
-      ...snapshot.data()
-    };
-  }
-
-  async function loadProfile() {
-    try {
-      const profileRef = doc(db, "users", profileUserId);
-      const profileSnap = await getDoc(profileRef);
-
-      if (!profileSnap.exists()) {
-        profileCard.innerHTML = `<div class="message error">Profile not found.</div>`;
-        postsGrid.innerHTML = "";
-        return;
-      }
-
-      profileUserData = {
-        uid: profileUserId,
-        followers: [],
-        following: [],
-        savedPosts: [],
-        ...profileSnap.data()
-      };
-
-      await loadUserPosts();
-
-      if (isOwnProfile()) {
-        await loadSavedPosts();
-      }
-
-      renderProfile();
-      renderTabs();
-      renderGrid();
-    } catch (error) {
-      console.error(error);
-      profileCard.innerHTML = `
-        <div class="message error">
-          Could not load profile: ${escapeHTML(error.message)}
-        </div>
-      `;
-    }
-  }
-
-  async function loadUserPosts() {
-    const postsQuery = query(
-      collection(db, "posts"),
-      where("userId", "==", profileUserId)
-    );
-
-    const snapshot = await getDocs(postsQuery);
-
-    userPosts = snapshot.docs.map(postDoc => ({
-      id: postDoc.id,
-      likedBy: [],
-      savedBy: [],
-      likesCount: 0,
-      commentsCount: 0,
-      isStory: false,
-      ...postDoc.data()
-    }));
-
-    userPosts.sort((a, b) => {
-      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-      return bTime - aTime;
-    });
-  }
-
-  async function loadSavedPosts() {
-    const savedIds = currentUserData.savedPosts || [];
-    savedPosts = [];
-
-    for (const postId of savedIds) {
-      const postSnap = await getDoc(doc(db, "posts", postId));
-
-      if (postSnap.exists()) {
-        savedPosts.push({
-          id: postSnap.id,
-          likedBy: [],
-          savedBy: [],
-          likesCount: 0,
-          commentsCount: 0,
-          isStory: false,
-          ...postSnap.data()
-        });
-      }
-    }
-
-    savedPosts.sort((a, b) => {
-      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-      return bTime - aTime;
-    });
-  }
-
-  function renderProfile() {
-    const ownProfile = isOwnProfile();
-    const following = (currentUserData.following || []).includes(profileUserId);
-
+    renderProfile();
+    renderTabs();
+    renderGrid();
+  } catch (error) {
+    console.error(error);
     profileCard.innerHTML = `
-      <div class="profile-top">
-        ${getAvatarHTML(profileUserData)}
-
-        <div class="profile-info">
-          <h1>${escapeHTML(profileUserData.username || "creator")}</h1>
-          <p>${escapeHTML(profileUserData.bio || "Social, leveled up.")}</p>
-
-          <div class="stats">
-            <div class="stat">
-              <strong>${userPosts.length}</strong>
-              <small>Posts</small>
-            </div>
-
-            <div class="stat">
-              <strong>${(profileUserData.followers || []).length}</strong>
-              <small>Followers</small>
-            </div>
-
-            <div class="stat">
-              <strong>${(profileUserData.following || []).length}</strong>
-              <small>Following</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-actions">
-          ${ownProfile ? `
-            <button class="primary-btn" id="createBtn">
-              <i data-lucide="plus"></i> Create
-            </button>
-
-            <button class="secondary-btn" id="editBtn">
-              <i data-lucide="pencil"></i> Edit profile
-            </button>
-          ` : `
-            <button class="primary-btn" id="followBtn">
-              <i data-lucide="${following ? "user-check" : "user-plus"}"></i>
-              ${following ? "Following" : "Follow"}
-            </button>
-
-            <button class="secondary-btn muted" id="messageBtn">
-              <i data-lucide="message-circle"></i> Message
-            </button>
-          `}
-        </div>
+      <div class="message error">
+        Could not load profile: ${escapeHTML(error.message)}
       </div>
     `;
+  }
+}
 
-    const createBtn = document.getElementById("createBtn");
-    if (createBtn) {
-      createBtn.addEventListener("click", () => {
-        window.location.href = "create.html";
+async function loadUserPosts() {
+  const postsQuery = query(
+    collection(db, "posts"),
+    where("userId", "==", profileUserId)
+  );
+
+  const snapshot = await getDocs(postsQuery);
+
+  userPosts = snapshot.docs.map(postDoc => ({
+    id: postDoc.id,
+    likedBy: [],
+    savedBy: [],
+    likesCount: 0,
+    commentsCount: 0,
+    isStory: false,
+    ...postDoc.data()
+  }));
+
+  userPosts.sort((a, b) => {
+    const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return bTime - aTime;
+  });
+}
+
+async function loadSavedPosts() {
+  const savedIds = currentUserData.savedPosts || [];
+  savedPosts = [];
+
+  for (const postId of savedIds) {
+    const postSnap = await getDoc(doc(db, "posts", postId));
+
+    if (postSnap.exists()) {
+      savedPosts.push({
+        id: postSnap.id,
+        likedBy: [],
+        savedBy: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isStory: false,
+        ...postSnap.data()
       });
     }
-
-    const editBtn = document.getElementById("editBtn");
-    if (editBtn) {
-      editBtn.addEventListener("click", () => {
-        window.location.href = "edit-profile.html";
-      });
-    }
-
-    const followBtn = document.getElementById("followBtn");
-    if (followBtn) {
-      followBtn.addEventListener("click", toggleFollow);
-    }
-
-    const messageBtn = document.getElementById("messageBtn");
-    if (messageBtn) {
-      messageBtn.addEventListener("click", () => {
-        window.location.href = "messages.html";
-      });
-    }
-
-    lucide.createIcons();
   }
 
-  function renderTabs() {
-    if (isOwnProfile()) {
-      tabs.innerHTML = `
-        <button class="tab ${activeTab === "posts" ? "active" : ""}" data-tab="posts">Posts</button>
-        <button class="tab ${activeTab === "saved" ? "active" : ""}" data-tab="saved">Saved</button>
-      `;
-    } else {
-      tabs.innerHTML = `
-        <button class="tab active" data-tab="posts">Posts</button>
-      `;
-    }
+  savedPosts.sort((a, b) => {
+    const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return bTime - aTime;
+  });
+}
 
-    document.querySelectorAll(".tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        activeTab = tab.dataset.tab;
-        renderTabs();
-        renderGrid();
-      });
+function renderProfile() {
+  const ownProfile = isOwnProfile();
+  // Extra safety: never show follow if profileUserId somehow equals currentUser.uid
+  const canFollow  = !ownProfile && profileUserId !== currentUser.uid;
+  const following  = canFollow && (currentUserData.following || []).includes(profileUserId);
+
+  profileCard.innerHTML = `
+    <div class="profile-top">
+      ${getAvatarHTML(profileUserData)}
+
+      <div class="profile-info">
+        <h1>${escapeHTML(profileUserData.username || "creator")}</h1>
+        <p>${escapeHTML(profileUserData.bio || "Social, leveled up.")}</p>
+
+        <div class="stats">
+          <div class="stat">
+            <strong>${userPosts.length}</strong>
+            <small>Posts</small>
+          </div>
+
+          <div class="stat">
+            <strong>${(profileUserData.followers || []).length}</strong>
+            <small>Followers</small>
+          </div>
+
+          <div class="stat">
+            <strong>${(profileUserData.following || []).length}</strong>
+            <small>Following</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-actions">
+        ${ownProfile ? `
+          <button class="primary-btn" id="createBtn">
+            <i data-lucide="plus"></i> Create
+          </button>
+
+          <button class="secondary-btn" id="editBtn">
+            <i data-lucide="pencil"></i> Edit profile
+          </button>
+        ` : canFollow ? `
+          <button class="primary-btn" id="followBtn">
+            <i data-lucide="${following ? "user-check" : "user-plus"}"></i>
+            ${following ? "Following" : "Follow"}
+          </button>
+
+          <button class="secondary-btn muted" id="messageBtn">
+            <i data-lucide="message-circle"></i> Message
+          </button>
+        ` : ""}
+      </div>
+    </div>
+  `;
+
+  const createBtn = document.getElementById("createBtn");
+  if (createBtn) {
+    createBtn.addEventListener("click", () => {
+      window.location.href = "create.html";
     });
   }
 
-  function renderGrid() {
-    const posts = activeTab === "saved" ? savedPosts : userPosts;
-
-    if (!posts.length) {
-      postsGrid.innerHTML = `
-        <article class="card empty">
-          ${activeTab === "saved" ? "No saved posts yet." : "No posts yet."}
-        </article>
-      `;
-      return;
-    }
-
-    postsGrid.innerHTML = posts.map(post => createTileHTML(post)).join("");
-    lucide.createIcons();
+  const editBtn = document.getElementById("editBtn");
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      window.location.href = "edit-profile.html";
+    });
   }
 
-  function createTileHTML(post) {
-    const image = post.imageData || post.imageUrl || "";
+  const followBtn = document.getElementById("followBtn");
+  if (followBtn) {
+    followBtn.addEventListener("click", toggleFollow);
+  }
 
-    if (image) {
-      return `
-        <a class="post-tile" href="post.html?id=${post.id}">
-          <img src="${image}" alt="Nexr post">
-          <div class="tile-overlay">
-            <span><i data-lucide="heart"></i> ${post.likesCount || 0}</span>
-            <span><i data-lucide="message-circle"></i> ${post.commentsCount || 0}</span>
-          </div>
-        </a>
-      `;
-    }
+  const messageBtn = document.getElementById("messageBtn");
+  if (messageBtn) {
+    messageBtn.addEventListener("click", () => {
+      window.location.href = "messages.html";
+    });
+  }
 
+  lucide.createIcons();
+}
+
+function renderTabs() {
+  if (isOwnProfile()) {
+    tabs.innerHTML = `
+      <button class="tab ${activeTab === "posts" ? "active" : ""}" data-tab="posts">Posts</button>
+      <button class="tab ${activeTab === "saved" ? "active" : ""}" data-tab="saved">Saved</button>
+    `;
+  } else {
+    tabs.innerHTML = `
+      <button class="tab active" data-tab="posts">Posts</button>
+    `;
+  }
+
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeTab = tab.dataset.tab;
+      renderTabs();
+      renderGrid();
+    });
+  });
+}
+
+function renderGrid() {
+  const posts = activeTab === "saved" ? savedPosts : userPosts;
+
+  if (!posts.length) {
+    postsGrid.innerHTML = `
+      <article class="card empty">
+        ${activeTab === "saved" ? "No saved posts yet." : "No posts yet."}
+      </article>
+    `;
+    return;
+  }
+
+  postsGrid.innerHTML = posts.map(post => createTileHTML(post)).join("");
+  lucide.createIcons();
+}
+
+function createTileHTML(post) {
+  const image = post.imageData || post.imageUrl || "";
+
+  if (image) {
     return `
-      <a class="post-tile text-tile" href="post.html?id=${post.id}">
-        <p>${escapeHTML(post.caption || "Nexr post")}</p>
+      <a class="post-tile" href="post.html?id=${post.id}">
+        <img src="${image}" alt="Nexr post">
         <div class="tile-overlay">
           <span><i data-lucide="heart"></i> ${post.likesCount || 0}</span>
           <span><i data-lucide="message-circle"></i> ${post.commentsCount || 0}</span>
@@ -625,74 +628,87 @@
     `;
   }
 
-  async function toggleFollow() {
-    if (isOwnProfile()) return;
+  return `
+    <a class="post-tile text-tile" href="post.html?id=${post.id}">
+      <p>${escapeHTML(post.caption || "Nexr post")}</p>
+      <div class="tile-overlay">
+        <span><i data-lucide="heart"></i> ${post.likesCount || 0}</span>
+        <span><i data-lucide="message-circle"></i> ${post.commentsCount || 0}</span>
+      </div>
+    </a>
+  `;
+}
 
-    const following = (currentUserData.following || []).includes(profileUserId);
+async function toggleFollow() {
+  // Hard guard: never follow yourself, regardless of how this was called
+  if (!profileUserId || profileUserId === currentUser.uid) return;
+  if (isOwnProfile()) return;
 
-    const currentUserRef = doc(db, "users", currentUser.uid);
-    const profileUserRef = doc(db, "users", profileUserId);
+  const following = (currentUserData.following || []).includes(profileUserId);
 
-    await updateDoc(currentUserRef, {
-      following: following ? arrayRemove(profileUserId) : arrayUnion(profileUserId)
-    });
+  const currentUserRef = doc(db, "users", currentUser.uid);
+  const profileUserRef = doc(db, "users", profileUserId);
 
-    await updateDoc(profileUserRef, {
-      followers: following ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-    });
+  await updateDoc(currentUserRef, {
+    following: following ? arrayRemove(profileUserId) : arrayUnion(profileUserId)
+  });
 
-    currentUserData.following = following
-      ? (currentUserData.following || []).filter(id => id !== profileUserId)
-      : [...(currentUserData.following || []), profileUserId];
+  await updateDoc(profileUserRef, {
+    followers: following ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+  });
 
-    profileUserData.followers = following
-      ? (profileUserData.followers || []).filter(id => id !== currentUser.uid)
-      : [...(profileUserData.followers || []), currentUser.uid];
+  currentUserData.following = following
+    ? (currentUserData.following || []).filter(id => id !== profileUserId)
+    : [...(currentUserData.following || []), profileUserId];
 
-    if (!following) {
-      await createNotification(profileUserId, "follow", "started following you");
-    }
+  profileUserData.followers = following
+    ? (profileUserData.followers || []).filter(id => id !== currentUser.uid)
+    : [...(profileUserData.followers || []), currentUser.uid];
 
-    renderProfile();
+  if (!following) {
+    await createNotification(profileUserId, "follow", "started following you");
   }
 
-  async function createNotification(toUserId, type, text) {
-    await addDoc(collection(db, "notifications"), {
-      toUserId,
-      fromUserId: currentUser.uid,
-      fromUsername: currentUserData.username || "creator",
-      type,
-      text,
-      read: false,
-      createdAt: serverTimestamp()
-    });
+  renderProfile();
+}
+
+async function createNotification(toUserId, type, text) {
+  await addDoc(collection(db, "notifications"), {
+    toUserId,
+    fromUserId: currentUser.uid,
+    fromUsername: currentUserData.username || "creator",
+    type,
+    text,
+    read: false,
+    createdAt: serverTimestamp()
+  });
+}
+
+function isOwnProfile() {
+  return profileUserId === currentUser.uid;
+}
+
+function getAvatarHTML(user) {
+  const name = user.username || "N";
+  const avatarUrl = user.avatarUrl || "";
+
+  if (avatarUrl) {
+    return `<div class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(name)}"></div>`;
   }
 
-  function isOwnProfile() {
-    return profileUserId === currentUser.uid;
-  }
+  return `<div class="avatar">${escapeHTML(name.charAt(0).toUpperCase())}</div>`;
+}
 
-  function getAvatarHTML(user) {
-    const name = user.username || "N";
-    const avatarUrl = user.avatarUrl || "";
+function escapeHTML(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-    if (avatarUrl) {
-      return `<div class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(name)}"></div>`;
-    }
-
-    return `<div class="avatar">${escapeHTML(name.charAt(0).toUpperCase())}</div>`;
-  }
-
-  function escapeHTML(value) {
-    return String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  lucide.createIcons();
+lucide.createIcons();
 </script>
 </body>
 </html>

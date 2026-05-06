@@ -4,16 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nexr — Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         :root {
-          --bg:#050505;
-          --panel:rgba(16,16,19,.9);
+          --bg:#050507;
+          --panel:rgba(14,14,18,.88);
           --soft:rgba(255,255,255,.045);
-          --line:#26262c;
-          --text:#fff;
-          --muted:#a1a1aa;
+          --line:rgba(255,255,255,.08);
+          --text:#f0f0f5;
+          --muted:#8888a0;
           --accent:#00e5ff;
           --accent2:#7c3aed;
           --danger:#ff4d6d;
@@ -25,7 +28,7 @@
           margin:0;
           min-height:100vh;
           color:var(--text);
-          font-family:Arial,sans-serif;
+          font-family:'DM Sans',Arial,sans-serif;
           background:
             radial-gradient(circle at 15% 5%, rgba(0,229,255,.14), transparent 32%),
             radial-gradient(circle at 85% 15%, rgba(124,58,237,.2), transparent 34%),
@@ -54,6 +57,7 @@
         .logo {
           font-size:34px;
           font-weight:950;
+          font-family:'Space Grotesk',Arial,sans-serif;
         }
 
         .logo span {
@@ -184,6 +188,32 @@
           color:var(--danger);
         }
 
+        .creator-pill {
+          display:inline-flex;
+          align-items:center;
+          gap:6px;
+          width:max-content;
+          margin-top:6px;
+          border:1px solid rgba(0,229,255,.34);
+          border-radius:999px;
+          padding:5px 10px;
+          background:rgba(0,229,255,.08);
+          color:var(--accent);
+          font-size:12px;
+          font-weight:950;
+        }
+
+        .creator-status {
+          display:flex;
+          align-items:center;
+          gap:8px;
+          color:var(--muted);
+          font-size:13px;
+          margin-top:8px;
+        }
+
+        .creator-status.active { color:var(--accent); }
+
         .message {
           min-height:22px;
           color:var(--danger);
@@ -213,6 +243,10 @@
             width:100%;
           }
         }
+
+        @media(max-width:860px) {
+          .page, main.page { padding-bottom: 90px !important; }
+        }
     </style>
 </head>
 
@@ -235,6 +269,25 @@
                 <strong>Loading...</strong>
                 <small>Please wait</small>
             </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Creator mode</h2>
+
+        <div class="setting">
+            <div class="setting-info">
+                <strong>Creator profile tag</strong>
+                <small>Turn this on to show the Creator tag and appear in Rising Creators.</small>
+                <div class="creator-status" id="creatorStatus">
+                    <i data-lucide="badge-check"></i>
+                    <span>Checking creator status...</span>
+                </div>
+            </div>
+            <button class="btn primary" id="creatorToggleBtn">
+                <i data-lucide="sparkles"></i>
+                Enable
+            </button>
         </div>
     </section>
 
@@ -298,156 +351,215 @@
 </main>
 
 <script type="module">
-    import { auth, db } from "./firebase.js";
+    import { injectMobileNav } from "./nav.js";
+injectMobileNav("settings");
 
-    import {
-      onAuthStateChanged,
-      signOut,
-      deleteUser
-    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { auth, db } from "./firebase.js";
 
-    import {
-      doc,
-      getDoc,
-      deleteDoc
-    } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+  import {
+    onAuthStateChanged,
+    signOut,
+    deleteUser
+  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 
-    let currentUser = null;
-    let currentUserData = null;
+  import {
+    doc,
+    getDoc,
+    setDoc,
+    deleteDoc
+  } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-    const accountCard = document.getElementById("accountCard");
-    const profileRow = document.getElementById("profileRow");
-    const message = document.getElementById("message");
+  let currentUser = null;
+  let currentUserData = null;
 
-    const editProfileBtn = document.getElementById("editProfileBtn");
-    const viewProfileBtn = document.getElementById("viewProfileBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+  const accountCard = document.getElementById("accountCard");
+  const profileRow = document.getElementById("profileRow");
+  const message = document.getElementById("message");
 
-    onAuthStateChanged(auth, async user => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
+  const editProfileBtn = document.getElementById("editProfileBtn");
+  const viewProfileBtn = document.getElementById("viewProfileBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+  const creatorToggleBtn = document.getElementById("creatorToggleBtn");
+  const creatorStatus = document.getElementById("creatorStatus");
 
-      currentUser = user;
-      currentUserData = await getUserData(user.uid);
+  onAuthStateChanged(auth, async user => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    currentUser = user;
+    currentUserData = await getUserData(user.uid);
+    renderAccount();
+    renderCreatorMode();
+  });
+
+  editProfileBtn.addEventListener("click", () => {
+    window.location.href = "edit-profile.html";
+  });
+
+  viewProfileBtn.addEventListener("click", () => {
+    if (!currentUser) return;
+    window.location.href = `profile.html?uid=${currentUser.uid}`;
+  });
+
+  creatorToggleBtn.addEventListener("click", async () => {
+    if (!currentUser || !currentUserData) return;
+
+    const nextValue = !Boolean(currentUserData.isCreator);
+
+    try {
+      setLoading(true);
+      await setDoc(doc(db, "users", currentUser.uid), {
+        isCreator: nextValue,
+        creatorTag: nextValue ? "Creator" : "",
+        creatorEnabledAt: nextValue ? new Date().toISOString() : null
+      }, { merge: true });
+
+      currentUserData = {
+        ...currentUserData,
+        isCreator: nextValue,
+        creatorTag: nextValue ? "Creator" : ""
+      };
+
       renderAccount();
-    });
+      renderCreatorMode();
+      showMessage(nextValue ? "Creator tag enabled. You can now appear in Rising Creators." : "Creator tag disabled.", true);
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  });
 
-    editProfileBtn.addEventListener("click", () => {
-      window.location.href = "edit-profile.html";
-    });
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      setLoading(true);
+      await signOut(auth);
+      window.location.href = "login.html";
+    } catch (error) {
+      showMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  });
 
-    viewProfileBtn.addEventListener("click", () => {
-      if (!currentUser) return;
-      window.location.href = `profile.html?uid=${currentUser.uid}`;
-    });
+  deleteAccountBtn.addEventListener("click", async () => {
+    if (!currentUser) return;
 
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        setLoading(true);
-        await signOut(auth);
-        window.location.href = "login.html";
-      } catch (error) {
+    const firstConfirm = confirm("Delete your Nexr account? This cannot be undone.");
+    if (!firstConfirm) return;
+
+    const typed = prompt('Type DELETE to confirm account deletion.');
+
+    if (typed !== "DELETE") {
+      showMessage("Account deletion cancelled.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      showMessage("Deleting account...", true);
+
+      await deleteDoc(doc(db, "users", currentUser.uid));
+      await deleteUser(currentUser);
+
+      window.location.href = "signup.html";
+    } catch (error) {
+      console.error(error);
+
+      if (error.code === "auth/requires-recent-login") {
+        showMessage("Please log out, log back in, then delete your account.");
+      } else {
         showMessage(error.message);
-      } finally {
-        setLoading(false);
       }
-    });
+    } finally {
+      setLoading(false);
+    }
+  });
 
-    deleteAccountBtn.addEventListener("click", async () => {
-      if (!currentUser) return;
+  async function getUserData(uid) {
+    const snapshot = await getDoc(doc(db, "users", uid));
 
-      const firstConfirm = confirm("Delete your Nexr account? This cannot be undone.");
-      if (!firstConfirm) return;
-
-      const typed = prompt('Type DELETE to confirm account deletion.');
-
-      if (typed !== "DELETE") {
-        showMessage("Account deletion cancelled.");
-        return;
-      }
-
-      try {
-        setLoading(true);
-        showMessage("Deleting account...", true);
-
-        await deleteDoc(doc(db, "users", currentUser.uid));
-        await deleteUser(currentUser);
-
-        window.location.href = "signup.html";
-      } catch (error) {
-        console.error(error);
-
-        if (error.code === "auth/requires-recent-login") {
-          showMessage("Please log out, log back in, then delete your account.");
-        } else {
-          showMessage(error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    async function getUserData(uid) {
-      const snapshot = await getDoc(doc(db, "users", uid));
-
-      if (!snapshot.exists()) {
-        return {
-          uid,
-          username: currentUser.displayName || currentUser.email.split("@")[0],
-          email: currentUser.email || "",
-          avatarUrl: currentUser.photoURL || "",
-          bio: "Social, leveled up."
-        };
-      }
-
+    if (!snapshot.exists()) {
       return {
         uid,
-        ...snapshot.data()
+        username: currentUser.displayName || currentUser.email.split("@")[0],
+        email: currentUser.email || "",
+        avatarUrl: currentUser.photoURL || "",
+        bio: "Social, leveled up.",
+        isCreator: false,
+        creatorTag: ""
       };
     }
 
-    function renderAccount() {
-      const username = currentUserData.username || "creator";
-      const email = currentUserData.email || currentUser.email || "";
-      const avatarUrl = currentUserData.avatarUrl || currentUser.photoURL || "";
+    return {
+      uid,
+      isCreator: false,
+      creatorTag: "",
+      ...snapshot.data()
+    };
+  }
 
-      profileRow.innerHTML = `
-        ${avatarUrl
-          ? `<div class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(username)}"></div>`
-          : `<div class="avatar">${escapeHTML(username.charAt(0).toUpperCase())}</div>`
-        }
+  function renderAccount() {
+    const username = currentUserData.username || "creator";
+    const email = currentUserData.email || currentUser.email || "";
+    const avatarUrl = currentUserData.avatarUrl || currentUser.photoURL || "";
 
-        <div class="profile-meta">
-          <strong>${escapeHTML(username)}</strong>
-          <small>${escapeHTML(email)}</small>
-        </div>
-      `;
-    }
+    profileRow.innerHTML = `
+      ${avatarUrl
+        ? `<div class="avatar"><img src="${avatarUrl}" alt="${escapeHTML(username)}"></div>`
+        : `<div class="avatar">${escapeHTML(username.charAt(0).toUpperCase())}</div>`
+      }
 
-    function setLoading(isLoading) {
-      accountCard.classList.toggle("loading", isLoading);
-      logoutBtn.disabled = isLoading;
-      deleteAccountBtn.disabled = isLoading;
-    }
+      <div class="profile-meta">
+        <strong>${escapeHTML(username)}</strong>
+        <small>${escapeHTML(email)}</small>
+        ${currentUserData.isCreator ? `<span class="creator-pill"><i data-lucide="badge-check"></i>${escapeHTML(currentUserData.creatorTag || "Creator")}</span>` : ""}
+      </div>
+    `;
+  }
 
-    function showMessage(text, success = false) {
-      message.textContent = text;
-      message.classList.toggle("success", success);
-    }
+  function renderCreatorMode() {
+    const isCreator = Boolean(currentUserData?.isCreator);
+    creatorToggleBtn.classList.toggle("secondary", isCreator);
+    creatorToggleBtn.classList.toggle("primary", !isCreator);
+    creatorToggleBtn.innerHTML = isCreator
+      ? `<i data-lucide="badge-check"></i> Enabled`
+      : `<i data-lucide="sparkles"></i> Enable`;
 
-    function escapeHTML(value) {
-      return String(value || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+    creatorStatus.classList.toggle("active", isCreator);
+    creatorStatus.innerHTML = isCreator
+      ? `<i data-lucide="badge-check"></i><span>${escapeHTML(currentUserData.creatorTag || "Creator")} tag active</span>`
+      : `<i data-lucide="badge-check"></i><span>Creator tag is off</span>`;
 
     lucide.createIcons();
+  }
+
+  function setLoading(isLoading) {
+    accountCard.classList.toggle("loading", isLoading);
+    logoutBtn.disabled = isLoading;
+    deleteAccountBtn.disabled = isLoading;
+    creatorToggleBtn.disabled = isLoading;
+  }
+
+  function showMessage(text, success = false) {
+    message.textContent = text;
+    message.classList.toggle("success", success);
+  }
+
+  function escapeHTML(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  lucide.createIcons();
 </script>
 </body>
 </html>

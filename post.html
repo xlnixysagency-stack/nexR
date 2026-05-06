@@ -154,6 +154,83 @@
           background:#09090b;
         }
 
+
+        .post-media {
+          position:relative;
+          overflow:hidden;
+          background:#09090b;
+          cursor:pointer;
+          user-select:none;
+          -webkit-tap-highlight-color:transparent;
+        }
+
+        .post-media .post-img {
+          display:block;
+        }
+
+        .heart-burst {
+          position:absolute;
+          left:50%;
+          top:50%;
+          width:110px;
+          height:110px;
+          display:grid;
+          place-items:center;
+          transform:translate(-50%,-50%) scale(.45);
+          color:white;
+          filter:drop-shadow(0 12px 32px rgba(255,43,214,.5));
+          pointer-events:none;
+          z-index:4;
+          animation:heartPop .78s cubic-bezier(.16,1,.3,1) forwards;
+        }
+
+        .heart-burst svg {
+          width:100%;
+          height:100%;
+          fill:var(--hot);
+          stroke:white;
+          stroke-width:1.5;
+        }
+
+        .heart-particle {
+          position:absolute;
+          left:50%;
+          top:50%;
+          width:9px;
+          height:9px;
+          border-radius:999px;
+          background:linear-gradient(135deg,var(--hot),var(--accent));
+          transform:translate(-50%,-50%);
+          pointer-events:none;
+          z-index:5;
+          animation:particlePop .72s ease-out forwards;
+        }
+
+        .icon-btn.like-pop {
+          animation:likePulse .38s cubic-bezier(.16,1,.3,1);
+        }
+
+        @keyframes heartPop {
+          0% { opacity:0; transform:translate(-50%,-50%) scale(.35) rotate(-10deg); }
+          18% { opacity:1; transform:translate(-50%,-50%) scale(1.15) rotate(5deg); }
+          42% { transform:translate(-50%,-50%) scale(.96) rotate(0deg); }
+          72% { opacity:1; transform:translate(-50%,-50%) scale(1.03); }
+          100% { opacity:0; transform:translate(-50%,-58%) scale(.74); }
+        }
+
+        @keyframes particlePop {
+          to {
+            opacity:0;
+            transform:translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(.25);
+          }
+        }
+
+        @keyframes likePulse {
+          0% { transform:scale(1); }
+          45% { transform:scale(1.28); }
+          100% { transform:scale(1); }
+        }
+
         .post-body {
           padding:16px;
         }
@@ -453,11 +530,13 @@
     function renderPost() {
       if (!currentPost || !currentUserData) return;
 
-      const liked = (currentPost.likedBy || []).includes(currentUser.uid);
-      const saved = (currentPost.savedBy || []).includes(currentUser.uid);
-      const ownPost = currentPost.userId === currentUser.uid;
-      const following = (currentUserData.following || []).includes(currentPost.userId);
-      const image = currentPost.imageData || currentPost.imageUrl || "";
+      const liked     = (currentPost.likedBy || []).includes(currentUser.uid);
+      const saved     = (currentPost.savedBy || []).includes(currentUser.uid);
+      const ownPost   = currentPost.userId === currentUser.uid;
+      // Never show Follow on your own post; only show if post has a userId and it's someone else
+      const isStranger = !ownPost && !!currentPost.userId;
+      const following = isStranger && (currentUserData.following || []).includes(currentPost.userId);
+      const image     = currentPost.imageData || currentPost.imageUrl || "";
 
       postCard.innerHTML = `
         <div class="post-head">
@@ -473,14 +552,14 @@
             <button class="icon-btn danger" id="deletePostBtn" title="Delete post">
               <i data-lucide="trash-2"></i>
             </button>
-          ` : `
+          ` : isStranger ? `
             <button class="follow-btn ${following ? "following" : ""}" id="followBtn">
               ${following ? "Following" : "Follow"}
             </button>
-          `}
+          ` : ""}
         </div>
 
-        ${image ? `<img class="post-img" src="${image}" alt="Nexr post">` : ""}
+        ${image ? `<div class="post-media" id="postMedia" role="button" tabindex="0" aria-label="Double tap to like"><img class="post-img" src="${image}" alt="Nexr post" draggable="false"></div>` : ""}
 
         <div class="post-body">
           <div class="actions">
@@ -503,7 +582,7 @@
             </button>
           </div>
 
-          <strong>${currentPost.likesCount || 0} likes</strong>
+          <strong id="likesLabel">${currentPost.likesCount || 0} like${currentPost.likesCount === 1 ? "" : "s"}</strong>
 
           <p class="caption">
             <strong>${escapeHTML(currentPost.username || "creator")}</strong>
@@ -521,7 +600,37 @@
         </div>
       `;
 
-      document.getElementById("likeBtn").addEventListener("click", toggleLike);
+      document.getElementById("likeBtn").addEventListener("click", () => toggleLike({ burstTarget: document.getElementById("likeBtn") }));
+
+      const postMedia = document.getElementById("postMedia");
+      if (postMedia) {
+        let tapTimer = null;
+        let lastTap = 0;
+
+        postMedia.addEventListener("click", event => {
+          event.preventDefault();
+          const now = Date.now();
+
+          if (now - lastTap < 280) {
+            clearTimeout(tapTimer);
+            tapTimer = null;
+            lastTap = 0;
+            toggleLike({ forceLike: true, burstTarget: postMedia });
+            return;
+          }
+
+          lastTap = now;
+          tapTimer = setTimeout(() => { lastTap = 0; }, 260);
+        });
+
+        postMedia.addEventListener("keydown", event => {
+          if (event.key === " " || event.key === "Enter") {
+            event.preventDefault();
+            toggleLike({ forceLike: true, burstTarget: postMedia });
+          }
+        });
+      }
+
       document.getElementById("saveBtn").addEventListener("click", toggleSave);
       document.getElementById("shareBtn").addEventListener("click", sharePost);
       document.getElementById("focusCommentBtn").addEventListener("click", () => {
@@ -559,20 +668,93 @@
       `).join("");
     }
 
-    async function toggleLike() {
+    async function toggleLike(options = {}) {
       if (!currentPost) return;
 
-      const liked = (currentPost.likedBy || []).includes(currentUser.uid);
-      const postRef = doc(db, "posts", postId);
+      const alreadyLiked = (currentPost.likedBy || []).includes(currentUser.uid);
+      const shouldLike = options.forceLike ? true : !alreadyLiked;
 
-      await updateDoc(postRef, {
-        likedBy: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
-        likesCount: liked ? Math.max((currentPost.likesCount || 0) - 1, 0) : (currentPost.likesCount || 0) + 1
+      if (alreadyLiked && options.forceLike) {
+        playHeartBurst(options.burstTarget || document.getElementById("postMedia"));
+        return;
+      }
+
+      currentPost.likedBy = shouldLike
+        ? [...(currentPost.likedBy || []), currentUser.uid]
+        : (currentPost.likedBy || []).filter(uid => uid !== currentUser.uid);
+
+      currentPost.likesCount = shouldLike
+        ? (currentPost.likesCount || 0) + 1
+        : Math.max((currentPost.likesCount || 0) - 1, 0);
+
+      updateLikeUI(shouldLike, currentPost.likesCount);
+
+      if (shouldLike) {
+        playHeartBurst(options.burstTarget || document.getElementById("postMedia"));
+      }
+
+      try {
+        await updateDoc(doc(db, "posts", postId), {
+          likedBy: shouldLike ? arrayUnion(currentUser.uid) : arrayRemove(currentUser.uid),
+          likesCount: currentPost.likesCount
+        });
+
+        if (shouldLike && currentPost.userId !== currentUser.uid) {
+          await createNotification(currentPost.userId, "like", "liked your post");
+        }
+      } catch (error) {
+        console.error(error);
+        currentPost.likedBy = alreadyLiked
+          ? [...(currentPost.likedBy || []), currentUser.uid]
+          : (currentPost.likedBy || []).filter(uid => uid !== currentUser.uid);
+        currentPost.likesCount = alreadyLiked
+          ? (currentPost.likesCount || 0) + 1
+          : Math.max((currentPost.likesCount || 0) - 1, 0);
+        updateLikeUI(alreadyLiked, currentPost.likesCount);
+      }
+    }
+
+    function updateLikeUI(liked, likesCount) {
+      const likeBtn = document.getElementById("likeBtn");
+      const likesLabel = document.getElementById("likesLabel");
+
+      if (likeBtn) {
+        likeBtn.classList.toggle("active", liked);
+        likeBtn.classList.remove("like-pop");
+        void likeBtn.offsetWidth;
+        if (liked) likeBtn.classList.add("like-pop");
+      }
+
+      if (likesLabel) {
+        likesLabel.textContent = `${likesCount || 0} like${likesCount === 1 ? "" : "s"}`;
+      }
+    }
+
+    function playHeartBurst(target) {
+      if (!target) return;
+
+      const host = target.classList?.contains("post-media")
+        ? target
+        : document.getElementById("postMedia") || target;
+
+      const heart = document.createElement("div");
+      heart.className = "heart-burst";
+      heart.innerHTML = `<i data-lucide="heart"></i>`;
+      host.appendChild(heart);
+
+      const points = [[0,-72],[52,-48],[72,0],[48,52],[0,72],[-48,52],[-72,0],[-52,-48]];
+      points.forEach(([x, y], index) => {
+        const particle = document.createElement("span");
+        particle.className = "heart-particle";
+        particle.style.setProperty("--x", `${x}px`);
+        particle.style.setProperty("--y", `${y}px`);
+        particle.style.animationDelay = `${index * 0.018}s`;
+        host.appendChild(particle);
+        setTimeout(() => particle.remove(), 850);
       });
 
-      if (!liked && currentPost.userId !== currentUser.uid) {
-        await createNotification(currentPost.userId, "like", "liked your post");
-      }
+      lucide.createIcons();
+      setTimeout(() => heart.remove(), 850);
     }
 
     async function toggleSave() {
@@ -596,7 +778,8 @@
     }
 
     async function toggleFollow() {
-      if (!currentPost || currentPost.userId === currentUser.uid) return;
+      // Hard guard: never follow yourself
+      if (!currentPost || !currentPost.userId || currentPost.userId === currentUser.uid) return;
 
       const targetUserId = currentPost.userId;
       const following = (currentUserData.following || []).includes(targetUserId);
@@ -612,6 +795,7 @@
         followers: following ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
       });
 
+      // Update local state so re-renders are immediately correct
       currentUserData.following = following
         ? (currentUserData.following || []).filter(id => id !== targetUserId)
         : [...(currentUserData.following || []), targetUserId];
